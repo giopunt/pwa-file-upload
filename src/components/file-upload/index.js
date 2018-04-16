@@ -1,10 +1,12 @@
 import React, { Component } from "react";
+import { deleteFile, saveFile, getAllCachedFiles, getFileFromCache } from "../../api/cache";
 import styled from "styled-components";
 
 import FilePreview from "./components/file-preview";
 
 const Input = styled.input.attrs({
   accept: "image/*",
+  id: "file-upload",
   multiple: true,
   type: "file"
 })`
@@ -32,21 +34,30 @@ const Label = styled.label`
 class FileUpload extends Component {
   constructor(props) {
     super(props);
-    this.state = { files: [] };
+    this.state = { files: [], cachedFiles: [], cachedFile: undefined };
 
-    this.chooseFile = this.chooseFile.bind(this);
+    this.onChange = this.onChange.bind(this);
     this.upload = this.upload.bind(this);
     this.discard = this.discard.bind(this);
     this.fileInput = React.createRef();
   }
 
-  chooseFile(event) {
-    const files = event.target.files;
+  async componentDidMount() {
+    const cachedFiles = await getAllCachedFiles();
+    if(cachedFiles.length){
+      const file = await getFileFromCache(cachedFiles[0]);
+      console.log(file);
+      this.setState({ cachedFile: file.url })
+    }
+    this.setState({ cachedFiles: cachedFiles })
+  }
+
+  onChange(event) {
     this.setState({
       files: [
         ...this.state.files,
-        ...Array.from(files).map(file => {
-          file.id = file.name + new Date().getTime();
+        ...Array.from(event.target.files).map(file => {
+          file.id = `${new Date().getTime()}-${file.name}`;
           return file;
         })
       ]
@@ -55,12 +66,14 @@ class FileUpload extends Component {
   }
 
   upload(file) {
-    console.log(file);
+    console.log(this.state);
+    saveFile(file);
   }
 
   discard(file) {
+    deleteFile(file);
     this.setState({
-      files: Array.from(this.state.files).filter(fileInState => {
+      files: this.state.files.filter(fileInState => {
         return fileInState !== file;
       })
     });
@@ -76,15 +89,20 @@ class FileUpload extends Component {
           </span>
         </Label>
         <Input
-          id="file-upload"
-          onChange={this.chooseFile}
+          onChange={this.onChange}
           innerRef={comp => (this.fileInput = comp)}
         />
         <FilePreview
           files={this.state.files}
+          cachedFiles={this.state.cachedFiles}
           upload={this.upload}
           discard={this.discard}
         />
+        <div id="cached-file">
+        {
+          this.state.cachedFile && <img src={this.state.cachedFile} alt="" />
+        }
+        </div>
       </div>
     );
   }

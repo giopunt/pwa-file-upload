@@ -27,7 +27,6 @@ const Img = styled.img`
   height 100px;
   margin-top: 10px;
   margin-bottom: 10px;
-  width: 100px;
 `;
 
 const Frame = styled.div`
